@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'supabase-postgres'
+    static_configs:
+      - targets: ['localhost:9187'] # postgres_exporter
+    metrics_path: /metrics
+
+  - job_name: 'supavisor-pooler'
+    static_configs:
+      - targets: ['localhost:9898']
+    metrics_path: /metrics
+
+  - job_name: 'supabase-storage'
+    static_configs:
+      - targets: ['localhost:5000']
+    metrics_path: /metrics
+
+  - job_name: 'edge-runtime'
+    static_configs:
+      - targets: ['localhost:9091']
+    metrics_path: /metrics

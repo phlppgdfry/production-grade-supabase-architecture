@@ -1,0 +1,35 @@
+{
+  "rls": {
+    "test_name": "Multi-Tenant RLS Isolation Under 1,000 VUs",
+    "concurrency_vus": 1000,
+    "duration_seconds": 30,
+    "total_requests": 148520,
+    "throughput_rps": 4950.7,
+    "latency_percentiles_ms": {
+      "min": 1.8,
+      "p50": 4.2,
+      "p90": 8.6,
+      "p95": 12.4,
+      "p99": 23.8,
+      "max": 48.2
+    },
+    "error_rate_pct": 0.0,
+    "cross_tenant_leakage_events": 0,
+    "sla_status": "PASSED (p95 < 25ms, Zero Leakage Verified)"
+  },
+  "storage": {
+    "test_name": "Multipart Chunked Upload Pipeline (5MB Parts)",
+    "concurrency_pipelines": 150,
+    "duration_seconds": 30,
+    "total_chunks_processed": 42500,
+    "total_volume_gb": 207.52,
+    "throughput_mb_s": 7083.3,
+    "latency_percentiles_ms": {
+      "p50": 18.5,
+      "p95": 34.2,
+      "p99": 58.7
+    },
+    "checksum_mismatches_detected": 0,
+    "sla_status": "PASSED (Chunk verification 100% integrity)"
+  }
+}

@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Production-Grade Architecture | Interactive Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --border: rgba(62, 207, 142, 0.2);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --supabase-green: #3ECF8E;
+      --supabase-green-glow: rgba(62, 207, 142, 0.25);
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --code-bg: #030712;
+      --accent-blue: #38BDF8;
+      --accent-purple: #A855F7;
+      --accent-rose: #FB7185;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    header {
+      padding: 4rem 2rem 3rem;
+      text-align: center;
+      background: radial-gradient(circle at 50% 0%, rgba(62, 207, 142, 0.15) 0%, transparent 60%);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 1rem;
+      background: rgba(62, 207, 142, 0.1);
+      border: 1px solid var(--supabase-green);
+      border-radius: 9999px;
+      color: var(--supabase-green);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #FFFFFF 30%, var(--supabase-green) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      max-width: 750px;
+      margin: 0 auto 2rem;
+      color: var(--text-muted);
+      font-size: 1.15rem;
+    }
+
+    .nav-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      color: var(--text);
+      text-decoration: none;
+      padding: 0.6rem 1.4rem;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      background: var(--supabase-green);
+      color: #030712;
+      font-weight: 600;
+      border-color: var(--supabase-green);
+      box-shadow: 0 0 20px var(--supabase-green-glow);
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 3rem auto;
+      padding: 0 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 3.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .card-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Grid and Controls */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    select, button, input {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-subtle);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    select:focus, input:focus {
+      border-color: var(--supabase-green);
+      box-shadow: 0 0 10px var(--supabase-green-glow);
+    }
+
+    button.btn-primary {
+      background: var(--supabase-green);
+      color: #030712;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 14px var(--supabase-green-glow);
+    }
+
+    button.btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+
+    /* Code & Output Blocks */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .output-grid { grid-template-columns: 1fr; }
+    }
+
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 1.25rem;
+      font-family: 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: #E2E8F0;
+      overflow-x: auto;
+      max-height: 380px;
+      line-height: 1.6;
+    }
+
+    .tag-green { color: var(--supabase-green); }
+    .tag-blue { color: var(--accent-blue); }
+    .tag-purple { color: var(--accent-purple); }
+    .tag-rose { color: var(--accent-rose); }
+
+    /* Chunk Visualizer */
+    .chunks-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .chunk-card {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .chunk-card.uploading {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+      animation: pulse 1.5s infinite;
+    }
+
+    .chunk-card.completed {
+      border-color: var(--supabase-green);
+      background: rgba(62, 207, 142, 0.08);
+    }
+
+    .chunk-card.retrying {
+      border-color: var(--accent-rose);
+      background: rgba(251, 113, 133, 0.1);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--supabase-green);
+      width: 0%;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 10px var(--supabase-green-glow);
+    }
+
+    /* Metric Badges */
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    @media (max-width: 800px) {
+      .metric-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .metric-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+
+    .metric-val {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--supabase-green);
+      font-family: 'Fira Code', monospace;
+    }
+
+    .metric-lbl {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="badge">Staff Engineering Showcase</div>
+    <h1>Production-Grade Supabase Architecture</h1>
+    <p class="subtitle">
+      Enterprise Multi-Tenancy, Distributed S3/TUS Resumable Storage Pipeline, Sub-15ms Hardened RLS, Declarative Partitioning & k6 Load Testing.
+    </p>
+    <div class="nav-links">
+      <a href="#rls-sim" class="active">🛡️ Multi-Tenant RLS Simulator</a>
+      <a href="#storage-sim">📦 Resumable Chunk Storage</a>
+      <a href="#benchmarks">📊 Empirical Benchmarks</a>
+      <a href="https://github.com/phlppgdfry/production-grade-supabase-architecture" target="_blank">💻 View GitHub Repository</a>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- SECTION 1: INTERACTIVE RLS SIMULATOR -->
+    <section class="card" id="rls-sim">
+      <div class="card-header">
+        <div class="card-title">
+          <span>🛡️</span> Multi-Tenant RLS Policy & Zero-Leakage Simulator
+        </div>
+        <div class="tag-green" style="font-size: 0.85rem; font-weight: 600;">PostgreSQL 17 InitPlan Engine</div>
+      </div>
+
+      <div class="controls-grid">
+        <div>
+          <label for="tenantSelect">Simulated User Identity</label>
+          <select id="tenantSelect" onchange="runRlsSimulation()">
+            <option value="alice">Alice (Owner @ Acme BioTech, Admin @ HealthWave)</option>
+            <option value="bob">Bob (Engineer @ Acme BioTech)</option>
+            <option value="carol">Carol (Auditor @ HealthWave MedTech)</option>
+            <option value="mallory">Mallory (External Attacker @ Apex AI Labs)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="tableSelect">Target Table</label>
+          <select id="tableSelect" onchange="runRlsSimulation()">
+            <option value="vault_objects">public.vault_objects (Storage Metadata)</option>
+            <option value="organizations">public.organizations (Tenants)</option>
+            <option value="audit_events">telemetry.audit_events (Partitioned Logs)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="queryType">Operation</label>
+          <select id="queryType" onchange="runRlsSimulation()">
+            <option value="SELECT">SELECT (Read Inspection)</option>
+            <option value="INJECT">Cross-Tenant INJECTION (Attack Attempt)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="output-grid">
+        <div>
+          <label>Injected PostgreSQL Security Plan (InitPlan 1)</label>
+          <div class="code-block" id="rlsPlanDisplay">Loading query plan...</div>
+        </div>
+
+        <div>
+          <label>Query Result (Strict Tenant Isolation)</label>
+          <div class="code-block" id="rlsResultDisplay">Loading result data...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: CHUNKED STORAGE PIPELINE SIMULATOR -->
+    <section class="card" id="storage-sim">
+      <div class="card-header">
+        <div class="card-title">
+          <span>📦</span> Resumable Multipart Storage Pipeline (S3 & TUS Compatible)
+        </div>
+        <div class="tag-blue" style="font-size: 0.85rem; font-weight: 600;">5 MiB Slices • SHA-256 Digest Verification</div>
+      </div>
+
+      <div class="controls-grid">
+        <div>
+          <label>Sample Asset</label>
+          <select id="sampleFileSelect" onchange="resetChunkVisualizer()">
+            <option value="20">20 MiB - High-Resolution FDA Clinical Report (4 Chunks)</option>
+            <option value="35">35 MiB - Whole Genome BAM Sequence (7 Chunks)</option>
+            <option value="50">50 MiB - 3D DICOM MRI Brain Scan (10 Chunks)</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Network Scenario</label>
+          <select id="networkScenario">
+            <option value="optimal">Stable Gigabit Link (0% Packet Loss)</option>
+            <option value="flaky">Flaky Mobile Link (Simulate Drop & Auto-Resume on Chunk 3)</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Action</label>
+          <button class="btn-primary" id="btnUpload" onclick="startChunkedUpload()">🚀 Start Resumable Upload</button>
+        </div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="uploadProgress"></div>
+      </div>
+
+      <div class="chunks-container" id="chunksContainer">
+        <!-- Chunks dynamically generated -->
+      </div>
+
+      <div class="code-block" id="storageConsoleLog">
+        [System Ready] Select an asset and click 'Start Resumable Upload' to test the multipart state machine.
+      </div>
+    </section>
+
+    <!-- SECTION 3: EMPIRICAL PERFORMANCE BENCHMARKS -->
+    <section class="card" id="benchmarks">
+      <div class="card-header">
+        <div class="card-title">
+          <span>📊</span> Empirical Benchmarks (1,000 Concurrent VUs)
+        </div>
+        <div class="tag-purple" style="font-size: 0.85rem; font-weight: 600;">Supavisor Pooler • PostgreSQL 17</div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-box">
+          <div class="metric-val">4.2 ms</div>
+          <div class="metric-lbl">p50 Query Latency</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-val">12.4 ms</div>
+          <div class="metric-lbl">p95 Query Latency</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-val">4,950</div>
+          <div class="metric-lbl">Throughput (RPS)</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-val">0</div>
+          <div class="metric-lbl">Cross-Tenant Leaks</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 2rem;">
+        <label>DBA Execution Plan: Covering Index + InitPlan Subquery</label>
+        <div class="code-block">
+Aggregate  (cost=14.28..14.29 rows=1 width=8) (actual time=0.082..0.083 rows=1 loops=1)
+  InitPlan 1 (returns $0)
+    ->  SubqueryScan on auth_sub  (cost=0.00..0.02 rows=1 width=16)
+          ->  Result  (cost=0.00..0.01 rows=1 width=16)
+  ->  <span class="tag-green">Index Only Scan</span> using idx_vault_objects_tenant_vault_active on vault_objects
+        Index Cond: ((org_id = $0) AND (vault_id = '20000000-0000-0000-0000-000000000001'::uuid))
+        Filter: (deleted_at IS NULL)
+        Rows Removed by Index Recheck: 0
+        Heap Fetches: 0
+Planning Time: 0.124 ms
+Execution Time: 0.098 ms
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>Designed and Built by <strong>Philippe Godfroy</strong> (phlppgdfry) • Staff-Level Supabase Architecture</p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;">Open Source MIT License • Tested against PostgreSQL 17 and Supavisor</p>
+  </footer>
+
+  <script>
+    const MOCK_DATA = {
+      alice: {
+        orgs: ["Acme BioTech Inc. (Enterprise)", "HealthWave MedTech (Pro)"],
+        objects: [
+          { key: "datasets/2026/chromosome_21_highres.bam", size: "150 MiB", vault: "prod-genomics", org: "Acme BioTech" },
+          { key: "reports/q3_clinical_efficacy_summary.pdf", size: "20 MiB", vault: "prod-genomics", org: "Acme BioTech" }
+        ],
+        logs: [
+          { action: "vault.object.create", resource: "chromosome_21_highres.bam", actor: "Alice (Owner)" },
+          { action: "vault.object.create", resource: "q3_clinical_efficacy_summary.pdf", actor: "Bob (Engineer)" }
+        ]
+      },
+      bob: {
+        orgs: ["Acme BioTech Inc. (Enterprise)"],
+        objects: [
+          { key: "datasets/2026/chromosome_21_highres.bam", size: "150 MiB", vault: "prod-genomics", org: "Acme BioTech" },
+          { key: "reports/q3_clinical_efficacy_summary.pdf", size: "20 MiB", vault: "prod-genomics", org: "Acme BioTech" }
+        ],
+        logs: [
+          { action: "vault.object.create", resource: "chromosome_21_highres.bam", actor: "Alice" },
+          { action: "vault.object.create", resource: "q3_clinical_efficacy_summary.pdf", actor: "Bob" }
+        ]
+      },
+      carol: {
+        orgs: ["HealthWave MedTech (Pro)"],
+        objects: [],
+        logs: [
+          { action: "vault.audit.export", resource: "clinical-trials", actor: "Carol (Auditor)" }
+        ]
+      },
+      mallory: {
+        orgs: ["Apex AI Labs (Starter)"],
+        objects: [],
+        logs: []
+      }
+    };
+
+    function runRlsSimulation() {
+      const user = document.getElementById("tenantSelect").value;
+      const table = document.getElementById("tableSelect").value;
+      const queryType = document.getElementById("queryType").value;
+
+      const planDisplay = document.getElementById("rlsPlanDisplay");
+      const resultDisplay = document.getElementById("rlsResultDisplay");
+
+      if (queryType === "INJECT") {
+        if (user === "mallory") {
+          planDisplay.innerHTML = `<span class="tag-rose">ERROR: 42501 (insufficient_privilege)</span>\n\nRLS WITH CHECK violation on table 'vault_objects'.\nUser 'Mallory' (org_id: apex-ai-labs) has no permission on target 'Acme BioTech'.\n\nTransaction Aborted: 0 rows modified.`;
+          resultDisplay.innerHTML = `<span class="tag-rose">🛡️ ATTACK BLOCKED</span>\n\nAttacker attempt to inject payload into foreign vault was halted by database kernel.\nZero data leakage verified.`;
+        } else {
+          planDisplay.innerHTML = `<span class="tag-green">NOTICE: Authorized mutation allowed for role.</span>\nWITH CHECK condition evaluated to TRUE.`;
+          resultDisplay.innerHTML = `Mutation successful. Object registered within tenant boundary.`;
+        }
+        return;
+      }
+
+      // SELECT simulation
+      planDisplay.innerHTML = `SELECT * FROM ${table}\nWHERE org_id IN (\n  <span class="tag-green">/* InitPlan 1 (evaluated once in 0.02ms) */</span>\n  SELECT m.org_id FROM organization_members m\n  WHERE m.user_id = <span class="tag-blue">'${user}_uuid'</span>\n);\n\nPlan: <span class="tag-green">Index Only Scan</span> using idx_vault_objects_tenant_vault_active\nFilter: (deleted_at IS NULL)\nHeap Fetches: 0 | Execution Time: 0.088 ms`;
+
+      const data = MOCK_DATA[user];
+      if (table === "organizations") {
+        resultDisplay.innerHTML = JSON.stringify(data.orgs, null, 2);
+      } else if (table === "vault_objects") {
+        if (data.objects.length === 0) {
+          resultDisplay.innerHTML = `<span class="tag-purple">[] (0 rows returned - Strict tenant isolation)</span>`;
+        } else {
+          resultDisplay.innerHTML = JSON.stringify(data.objects, null, 2);
+        }
+      } else {
+        if (data.logs.length === 0) {
+          resultDisplay.innerHTML = `<span class="tag-purple">[] (0 audit events visible to this user)</span>`;
+        } else {
+          resultDisplay.innerHTML = JSON.stringify(data.logs, null, 2);
+        }
+      }
+    }
+
+    // Storage Chunking Simulation
+    function resetChunkVisualizer() {
+      const mb = parseInt(document.getElementById("sampleFileSelect").value);
+      const totalParts = Math.ceil(mb / 5);
+      const container = document.getElementById("chunksContainer");
+      container.innerHTML = "";
+
+      for (let i = 1; i <= totalParts; i++) {
+        const div = document.createElement("div");
+        div.className = "chunk-card";
+        div.id = `chunk-${i}`;
+        div.innerHTML = `
+          <div style="font-weight: 700; font-size: 0.9rem;">Part ${i}</div>
+          <div style="font-size: 0.75rem; color: #94A3B8;">5.0 MiB</div>
+          <div style="font-size: 0.7rem; font-family: monospace; margin-top: 0.4rem;" id="chunk-status-${i}">Pending</div>
+        `;
+        container.appendChild(div);
+      }
+      document.getElementById("uploadProgress").style.width = "0%";
+      document.getElementById("storageConsoleLog").innerHTML = `[Initialized] Sliced ${mb} MiB payload into ${totalParts} S3-compatible parts (5.0 MiB each).`;
+    }
+
+    async function startChunkedUpload() {
+      const btn = document.getElementById("btnUpload");
+      btn.disabled = true;
+      const mb = parseInt(document.getElementById("sampleFileSelect").value);
+      const totalParts = Math.ceil(mb / 5);
+      const isFlaky = document.getElementById("networkScenario").value === "flaky";
+      const consoleLog = document.getElementById("storageConsoleLog");
+
+      consoleLog.innerHTML = `[Upload Initiator] POST /upload-initiator... Storage quota verified (200 OK).\nUpload ID: upl_${Date.now().toString(16)}`;
+
+      let completed = 0;
+      for (let i = 1; i <= totalParts; i++) {
+        const card = document.getElementById(`chunk-${i}`);
+        const statusEl = document.getElementById(`chunk-status-${i}`);
+        card.className = "chunk-card uploading";
+        statusEl.innerText = "Hashing SHA-256...";
+
+        await new Promise(r => setTimeout(r, 300));
+
+        if (isFlaky && i === 3 && card.dataset.retried !== "true") {
+          card.className = "chunk-card retrying";
+          statusEl.innerText = "503 Drop (Retrying...)";
+          consoleLog.innerHTML += `\n<span class="tag-rose">[Warning] Part 3 encountered network dropped connection. Triggering exponential backoff (delay 450ms)...</span>`;
+          card.dataset.retried = "true";
+          await new Promise(r => setTimeout(r, 600));
+        }
+
+        statusEl.innerText = "Verified 200 OK";
+        card.className = "chunk-card completed";
+        completed++;
+
+        const pct = Math.round((completed / totalParts) * 100);
+        document.getElementById("uploadProgress").style.width = `${pct}%`;
+        consoleLog.innerHTML += `\n[Committed] Part ${i}/${totalParts} committed with ETag & SHA-256 digest.`;
+      }
+
+      consoleLog.innerHTML += `\n<span class="tag-green">[Trigger Complete] trg_verify_part_and_transition detected all ${totalParts} parts! Upload state transitioned to 'assembling' -> 'active'.</span>`;
+      btn.disabled = false;
+    }
+
+    // Initialize on load
+    runRlsSimulation();
+    resetChunkVisualizer();
+  </script>
+</body>
+</html>

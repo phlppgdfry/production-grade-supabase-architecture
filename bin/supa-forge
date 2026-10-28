@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# SupaForge CLI: Orchestration & Diagnostics Utility
+# Author: Philippe Godfroy
+# ==============================================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+function print_banner() {
+    echo -e "${GREEN}"
+    echo "================================================================================"
+    echo " ⚡ SUPAFORGE: Production-Grade Supabase Architecture CLI"
+    echo "================================================================================"
+    echo -e "${NC}"
+}
+
+function usage() {
+    print_banner
+    echo "Usage: ./bin/supa-forge <command>"
+    echo ""
+    echo "Commands:"
+    echo "  start       Spin up local Supabase development stack with Supavisor"
+    echo "  stop        Stop local Supabase development stack"
+    echo "  reset       Reset database, execute migrations, and apply seed data"
+    echo "  test:unit   Run TypeScript & SDK unit tests via Vitest"
+    echo "  test:db     Execute pgTAP database tests inside PostgreSQL"
+    echo "  bench       Run k6 load tests and generate empirical markdown report"
+    echo "  lint        Verify SQL formatting and Supabase migration constraints"
+    echo "  diagnose    Inspect connection pooler, slow queries, and cache hit ratios"
+    echo "  help        Display this help message"
+    echo ""
+}
+
+COMMAND="${1:-help}"
+
+case "${COMMAND}" in
+    start)
+        print_banner
+        echo -e "${BLUE}[*] Starting local Supabase stack with Supavisor pooler...${NC}"
+        cd "${ROOT_DIR}" && supabase start
+        ;;
+    stop)
+        print_banner
+        echo -e "${YELLOW}[*] Stopping local Supabase stack...${NC}"
+        cd "${ROOT_DIR}" && supabase stop
+        ;;
+    reset)
+        print_banner
+        echo -e "${BLUE}[*] Resetting database and applying migrations & seed...${NC}"
+        cd "${ROOT_DIR}" && supabase db reset
+        echo -e "${GREEN}[✓] Database successfully reset and seeded.${NC}"
+        ;;
+    test:unit)
+        print_banner
+        echo -e "${BLUE}[*] Running Vitest Unit & SDK Test Suite...${NC}"
+        cd "${ROOT_DIR}" && npx vitest run
+        ;;
+    test:db)
+        print_banner
+        echo -e "${BLUE}[*] Running pgTAP Multi-Tenant & Storage Tests...${NC}"
+        cd "${ROOT_DIR}" && supabase test db
+        ;;
+    bench)
+        print_banner
+        echo -e "${BLUE}[*] Running Benchmark & SRE Stress Suite...${NC}"
+        cd "${ROOT_DIR}" && python3 benchmarks/benchmark_runner.py
+        ;;
+    lint)
+        print_banner
+        echo -e "${BLUE}[*] Verifying migrations and schema linters...${NC}"
+        cd "${ROOT_DIR}" && supabase db lint
+        echo -e "${GREEN}[✓] Linting passed.${NC}"
+        ;;
+    diagnose)
+        print_banner
+        echo -e "${BLUE}[*] Querying SRE Diagnostics (Cache Hits & Slow Queries)...${NC}"
+        cd "${ROOT_DIR}" && supabase db query "SELECT * FROM internal.v_cache_hit_ratios LIMIT 10;"
+        ;;
+    help|--help|-h)
+        usage
+        ;;
+    *)
+        echo -e "${RED}[!] Unknown command: ${COMMAND}${NC}"
+        usage
+        exit 1
+        ;;
+esac

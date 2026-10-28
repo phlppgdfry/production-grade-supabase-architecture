@@ -1,0 +1,41 @@
+{
+  "name": "production-grade-supabase-architecture",
+  "version": "1.0.0",
+  "description": "Enterprise Multi-Tenant Supabase Architecture: Distributed Storage Pipeline, Hardened RLS, Declarative Partitioning, Observability & k6 Load Testing",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db": "supabase test db",
+    "lint": "eslint src/ --ext .ts",
+    "types:gen": "supabase gen types typescript --local > src/types/database.types.ts",
+    "bench:rls": "k6 run benchmarks/k6/load_test_rls.js",
+    "bench:storage": "k6 run benchmarks/k6/load_test_storage.js",
+    "bench:all": "python3 benchmarks/benchmark_runner.py"
+  },
+  "keywords": [
+    "supabase",
+    "postgresql",
+    "row-level-security",
+    "object-storage",
+    "distributed-systems",
+    "edge-functions",
+    "opentelemetry",
+    "prometheus",
+    "k6-load-testing",
+    "staff-engineer",
+    "multi-tenancy"
+  ],
+  "author": "Philippe Godfroy <philippe.godfroy@hotmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}

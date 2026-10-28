@@ -1,0 +1,93 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Database Engine & Connection Pooler (Supavisor)",
+      "type": "row"
+    },
+    {
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "id": 2,
+      "title": "Transactions Per Second (TPS)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "rate(pg_stat_database_xact_commit[1m])", "legendFormat": "Commits/s" },
+        { "expr": "rate(pg_stat_database_xact_rollback[1m])", "legendFormat": "Rollbacks/s" }
+      ]
+    },
+    {
+      "fieldConfig": {
+        "defaults": { "unit": "ms" }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "id": 3,
+      "title": "Mean Query Execution Latency",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "pg_stat_statements_mean_exec_time_ms", "legendFormat": "p95 Query Latency" }
+      ]
+    },
+    {
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 90, "max": 100 }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "id": 4,
+      "title": "Shared Buffer Cache Hit Ratio",
+      "type": "gauge",
+      "targets": [
+        { "expr": "100 * sum(rate(pg_stat_database_blks_hit[5m])) / sum(rate(pg_stat_database_blks_hit[5m]) + rate(pg_stat_database_blks_read[5m]))" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "id": 5,
+      "title": "Storage Engine & Resumable Multipart Throughput",
+      "type": "row"
+    },
+    {
+      "fieldConfig": {
+        "defaults": { "unit": "Bps" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "id": 6,
+      "title": "Storage Ingest Bandwidth",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "rate(supabase_storage_bytes_uploaded_total[1m])", "legendFormat": "Bytes Uploaded/s" }
+      ]
+    },
+    {
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "id": 7,
+      "title": "Multipart Uploads In Flight",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "supabase_storage_multipart_active_sessions", "legendFormat": "Active Sessions" }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["supabase", "postgres", "storage", "staff-engineering"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Supabase Production Infrastructure & Storage SRE",
+  "uid": "supabase-prod-sre"
+}
