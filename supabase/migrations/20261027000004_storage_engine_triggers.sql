@@ -1,40 +1,36 @@
 -- ==============================================================================
 -- Migration: 20261027000004_storage_engine_triggers.sql
--- Description: Storage quota enforcement, atomic byte accounting & upload state machine
+-- Description: Atomic Two-Phase Storage Quota Reservation, Accounting & Integrity State Machine
 -- Standards: Supabase Postgres Best Practices v1.1.0
---   - lock-short-transactions: fast atomic updates with minimal row locks
+--   - lock-short-transactions: atomic conditional UPDATE eliminating over-allocation races
 --   - security-privileges: SECURITY DEFINER with fixed search_path = public, pg_temp
 -- ==============================================================================
 
--- 1. QUOTA CHECK TRIGGER (Before Multipart Upload Initiation)
-CREATE OR REPLACE FUNCTION public.fn_check_storage_quota()
+-- 1. ATOMIC QUOTA RESERVATION (Before Multipart Upload Initiation)
+-- Replaces flawed SELECT ... FOR SHARE with atomic conditional UPDATE
+CREATE OR REPLACE FUNCTION public.fn_reserve_storage_quota()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-    v_used_bytes bigint;
-    v_max_bytes bigint;
-    v_is_active boolean;
+    v_updated_rows int;
 BEGIN
-    SELECT storage_used_bytes, max_storage_bytes, is_active
-    INTO v_used_bytes, v_max_bytes, v_is_active
-    FROM public.organizations
+    -- Atomic conditional reservation at row level:
+    -- If (used + reserved + requested) > max, the WHERE predicate fails, updating 0 rows.
+    UPDATE public.organizations
+    SET storage_reserved_bytes = storage_reserved_bytes + NEW.expected_size_bytes,
+        updated_at = now()
     WHERE id = NEW.org_id
-    FOR SHARE; -- Acquire lightweight shared lock on organization row
+      AND is_active = true
+      AND (storage_used_bytes + storage_reserved_bytes + NEW.expected_size_bytes) <= max_storage_bytes;
 
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Organization % does not exist', NEW.org_id;
-    END IF;
+    GET DIAGNOSTICS v_updated_rows = ROW_COUNT;
 
-    IF NOT v_is_active THEN
-        RAISE EXCEPTION 'Organization % is currently suspended or inactive', NEW.org_id;
-    END IF;
-
-    IF (v_used_bytes + NEW.expected_size_bytes) > v_max_bytes THEN
-        RAISE EXCEPTION 'Storage quota exceeded: Current usage % bytes + requested % bytes exceeds quota % bytes',
-            v_used_bytes, NEW.expected_size_bytes, v_max_bytes
+    IF v_updated_rows = 0 THEN
+        RAISE EXCEPTION 'Storage quota exceeded: insufficient headroom for % bytes reservation on organization %',
+            NEW.expected_size_bytes, NEW.org_id
             USING ERRCODE = '54000'; -- program_limit_exceeded
     END IF;
 
@@ -42,12 +38,41 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER trg_check_storage_quota_multipart
+CREATE TRIGGER trg_reserve_storage_quota_multipart
     BEFORE INSERT ON public.object_multipart_uploads
     FOR EACH ROW
-    EXECUTE FUNCTION public.fn_check_storage_quota();
+    EXECUTE FUNCTION public.fn_reserve_storage_quota();
 
--- 2. ATOMIC QUOTA ACCOUNTING (On Vault Object Activation / Deletion)
+-- 2. ATOMIC QUOTA RELEASE (On Multipart Upload Abort, Failure or Deletion)
+CREATE OR REPLACE FUNCTION public.fn_release_storage_reservation()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF (TG_OP = 'UPDATE' AND OLD.status IN ('initiated', 'in_progress', 'assembling') AND NEW.status IN ('aborted', 'failed')) THEN
+        UPDATE public.organizations
+        SET storage_reserved_bytes = GREATEST(0, storage_reserved_bytes - OLD.expected_size_bytes),
+            updated_at = now()
+        WHERE id = OLD.org_id;
+    ELSIF (TG_OP = 'DELETE' AND OLD.status IN ('initiated', 'in_progress', 'assembling')) THEN
+        UPDATE public.organizations
+        SET storage_reserved_bytes = GREATEST(0, storage_reserved_bytes - OLD.expected_size_bytes),
+            updated_at = now()
+        WHERE id = OLD.org_id;
+    END IF;
+
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+CREATE TRIGGER trg_release_storage_reservation
+    AFTER UPDATE OR DELETE ON public.object_multipart_uploads
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_release_storage_reservation();
+
+-- 3. ATOMIC QUOTA ACCOUNTING (On Vault Object Activation / Deletion)
 CREATE OR REPLACE FUNCTION public.fn_sync_storage_quota_accounting()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -56,14 +81,17 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
     IF (TG_OP = 'INSERT' AND NEW.status = 'active') THEN
+        -- Direct upload: increment used bytes
         UPDATE public.organizations
         SET storage_used_bytes = storage_used_bytes + NEW.size_bytes,
             updated_at = now()
         WHERE id = NEW.org_id;
     ELSIF (TG_OP = 'UPDATE') THEN
         IF (OLD.status != 'active' AND NEW.status = 'active') THEN
+            -- Transition from reserved to active used bytes
             UPDATE public.organizations
-            SET storage_used_bytes = storage_used_bytes + NEW.size_bytes,
+            SET storage_reserved_bytes = GREATEST(0, storage_reserved_bytes - NEW.size_bytes),
+                storage_used_bytes = storage_used_bytes + NEW.size_bytes,
                 updated_at = now()
             WHERE id = NEW.org_id;
         ELSIF (OLD.status = 'active' AND NEW.status = 'deleted') THEN
@@ -88,7 +116,7 @@ CREATE TRIGGER trg_sync_storage_quota_accounting
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_sync_storage_quota_accounting();
 
--- 3. MULTIPART PART VERIFICATION & AUTO-TRANSITION TRIGGER
+-- 4. MULTIPART PART VERIFICATION & AUTO-TRANSITION TRIGGER
 CREATE OR REPLACE FUNCTION public.fn_verify_part_and_transition()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -139,3 +167,43 @@ CREATE TRIGGER trg_verify_part_and_transition
     AFTER INSERT ON public.object_parts
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_verify_part_and_transition();
+
+-- 5. EXPIRED UPLOAD REAPER (Reclaims orphaned quota reservations & cleanups)
+CREATE OR REPLACE FUNCTION public.reap_expired_multipart_uploads(
+    p_batch_size int DEFAULT 50
+)
+RETURNS TABLE (
+    reaped_count int,
+    reclaimed_bytes bigint
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_reaped int := 0;
+    v_bytes bigint := 0;
+    r RECORD;
+BEGIN
+    FOR r IN
+        SELECT id, upload_id, org_id, expected_size_bytes
+        FROM public.object_multipart_uploads
+        WHERE status IN ('initiated', 'in_progress')
+          AND expires_at < now()
+        LIMIT p_batch_size
+        FOR UPDATE SKIP LOCKED
+    LOOP
+        UPDATE public.object_multipart_uploads
+        SET status = 'aborted',
+            updated_at = now()
+        WHERE id = r.id;
+
+        v_reaped := v_reaped + 1;
+        v_bytes := v_bytes + r.expected_size_bytes;
+    END LOOP;
+
+    reaped_count := v_reaped;
+    reclaimed_bytes := v_bytes;
+    RETURN NEXT;
+END;
+$$;

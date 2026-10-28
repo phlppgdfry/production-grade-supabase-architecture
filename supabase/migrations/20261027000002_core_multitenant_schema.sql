@@ -15,10 +15,12 @@ CREATE TABLE public.organizations (
     plan_tier text NOT NULL DEFAULT 'starter' CHECK (plan_tier IN ('starter', 'pro', 'enterprise')),
     max_storage_bytes bigint NOT NULL DEFAULT 10737418240, -- 10 GiB default
     storage_used_bytes bigint NOT NULL DEFAULT 0 CHECK (storage_used_bytes >= 0),
+    storage_reserved_bytes bigint NOT NULL DEFAULT 0 CHECK (storage_reserved_bytes >= 0),
     is_active boolean NOT NULL DEFAULT true,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT chk_org_slug_format CHECK (slug ~* '^[a-z0-9-]+$')
+    CONSTRAINT chk_org_slug_format CHECK (slug ~* '^[a-z0-9-]+$'),
+    CONSTRAINT chk_org_quota_headroom CHECK ((storage_used_bytes + storage_reserved_bytes) <= max_storage_bytes)
 );
 
 -- 2. ORGANIZATION MEMBERSHIPS (RBAC / ABAC)

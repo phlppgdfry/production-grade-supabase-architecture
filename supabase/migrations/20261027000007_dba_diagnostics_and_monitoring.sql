@@ -74,15 +74,16 @@ SELECT
     o.slug,
     o.plan_tier,
     o.storage_used_bytes,
+    o.storage_reserved_bytes,
     o.max_storage_bytes,
-    round(100.0 * (o.storage_used_bytes::numeric / nullif(o.max_storage_bytes, 0)), 2) AS quota_utilization_pct,
+    round(100.0 * ((o.storage_used_bytes + o.storage_reserved_bytes)::numeric / nullif(o.max_storage_bytes, 0)), 2) AS quota_utilization_pct,
     count(vo.id) FILTER (WHERE vo.deleted_at IS NULL) AS active_objects_count,
     coalesce(sum(vo.size_bytes) FILTER (WHERE vo.deleted_at IS NULL), 0) AS calculated_active_bytes,
     count(mu.id) FILTER (WHERE mu.status IN ('initiated', 'in_progress', 'assembling')) AS inflight_multipart_uploads
 FROM public.organizations o
 LEFT JOIN public.vault_objects vo ON vo.org_id = o.id
 LEFT JOIN public.object_multipart_uploads mu ON mu.org_id = o.id
-GROUP BY o.id, o.name, o.slug, o.plan_tier, o.storage_used_bytes, o.max_storage_bytes;
+GROUP BY o.id, o.name, o.slug, o.plan_tier, o.storage_used_bytes, o.storage_reserved_bytes, o.max_storage_bytes;
 
 -- Security grant for views
 GRANT SELECT ON public.v_tenant_storage_analytics TO authenticated;

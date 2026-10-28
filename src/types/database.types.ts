@@ -14,6 +14,7 @@ export interface Organization {
   plan_tier: 'starter' | 'pro' | 'enterprise';
   max_storage_bytes: number;
   storage_used_bytes: number;
+  storage_reserved_bytes: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;

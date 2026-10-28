@@ -1,35 +1,38 @@
 {
-  "rls": {
-    "test_name": "Multi-Tenant RLS Isolation Under 1,000 VUs",
-    "concurrency_vus": 1000,
-    "duration_seconds": 30,
-    "total_requests": 148520,
-    "throughput_rps": 4950.7,
-    "latency_percentiles_ms": {
-      "min": 1.8,
-      "p50": 4.2,
-      "p90": 8.6,
-      "p95": 12.4,
-      "p99": 23.8,
-      "max": 48.2
-    },
-    "error_rate_pct": 0.0,
-    "cross_tenant_leakage_events": 0,
-    "sla_status": "PASSED (p95 < 25ms, Zero Leakage Verified)"
+  "hardware": {
+    "os": "Darwin",
+    "os_release": "24.6.0",
+    "architecture": "arm64",
+    "cpu_count": 10,
+    "python_version": "3.15.1",
+    "timestamp_utc": "2026-10-28T01:06:26Z",
+    "environment_classification": "LOCAL WORKSTATION (macOS)"
   },
-  "storage": {
-    "test_name": "Multipart Chunked Upload Pipeline (5MB Parts)",
-    "concurrency_pipelines": 150,
-    "duration_seconds": 30,
-    "total_chunks_processed": 42500,
-    "total_volume_gb": 207.52,
-    "throughput_mb_s": 7083.3,
-    "latency_percentiles_ms": {
-      "p50": 18.5,
-      "p95": 34.2,
-      "p99": 58.7
+  "storage_benchmark": {
+    "test_name": "Storage Engine: Resumable Chunk Slicing & Checksum Pipeline",
+    "payload_size_mb": 50,
+    "chunk_size_mb": 5,
+    "parts_per_file": 10,
+    "iterations": 5,
+    "total_volume_processed_gb": 0.244,
+    "throughput_mb_s": 293.25,
+    "latencies_ms": {
+      "min": 115.73,
+      "p50": 169.63,
+      "mean": 170.5,
+      "p95": 260.02,
+      "p99": 260.02,
+      "max": 260.02
     },
-    "checksum_mismatches_detected": 0,
-    "sla_status": "PASSED (Chunk verification 100% integrity)"
+    "integrity_verified": true,
+    "final_s3_etag_sample": "\"c3be5e970a5d7398e88ffc01b366025a-10\""
+  },
+  "concurrency_lock_benchmark": {
+    "test_name": "Database Concurrency: Atomic Quota Evaluation Overhead",
+    "cycles": 200,
+    "p50_us": 0.042,
+    "p95_us": 0.125,
+    "p99_us": 0.709,
+    "unit": "microseconds"
   }
 }

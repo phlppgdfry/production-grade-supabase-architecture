@@ -23,11 +23,11 @@ DECLARE
     v_obj_2 uuid := '30000000-0000-0000-0000-000000000002'::uuid;
 BEGIN
     -- 1. SEED ORGANIZATIONS
-    INSERT INTO public.organizations (id, slug, name, plan_tier, max_storage_bytes, storage_used_bytes, is_active)
+    INSERT INTO public.organizations (id, slug, name, plan_tier, max_storage_bytes, storage_used_bytes, storage_reserved_bytes, is_active)
     VALUES
-        (v_acme_id, 'acme-biotech', 'Acme BioTech Inc.', 'enterprise', 53687091200, 0, true), -- 50 GiB
-        (v_health_id, 'healthwave-medtech', 'HealthWave MedTech', 'pro', 21474836480, 0, true),  -- 20 GiB
-        (v_apex_id, 'apex-ai-labs', 'Apex AI Labs', 'starter', 5368709120, 0, true)             -- 5 GiB
+        (v_acme_id, 'acme-biotech', 'Acme BioTech Inc.', 'enterprise', 53687091200, 0, 0, true), -- 50 GiB
+        (v_health_id, 'healthwave-medtech', 'HealthWave MedTech', 'pro', 21474836480, 0, 0, true),  -- 20 GiB
+        (v_apex_id, 'apex-ai-labs', 'Apex AI Labs', 'starter', 5368709120, 0, 0, true)             -- 5 GiB
     ON CONFLICT (id) DO NOTHING;
 
     -- 2. SEED MEMBERSHIPS

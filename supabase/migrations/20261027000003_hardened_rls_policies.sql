@@ -168,12 +168,13 @@ CREATE POLICY vault_objects_select_policy ON public.vault_objects
     );
 
 -- Insert: Write allowed for owner, admin, member (excludes auditor, readonly)
+-- Strictly enforces created_by attribution matching current_user_id (no null bypass)
 CREATE POLICY vault_objects_insert_policy ON public.vault_objects
     FOR INSERT
     TO authenticated
     WITH CHECK (
         public.user_has_org_role(org_id, ARRAY['owner', 'admin', 'member']::app_role[])
-        AND (created_by IS NULL OR created_by = (SELECT public.current_user_id()))
+        AND created_by = (SELECT public.current_user_id())
     );
 
 -- Update: Modification restricted to non-readonly roles
@@ -208,6 +209,7 @@ CREATE POLICY multipart_insert_policy ON public.object_multipart_uploads
     TO authenticated
     WITH CHECK (
         public.user_has_org_role(org_id, ARRAY['owner', 'admin', 'member']::app_role[])
+        AND created_by = (SELECT public.current_user_id())
     );
 
 CREATE POLICY parts_select_policy ON public.object_parts
