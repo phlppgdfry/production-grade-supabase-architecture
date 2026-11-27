@@ -1,0 +1,13 @@
+# Bundles Dependabot security fixes into one pull request per ecosystem and directory.
+# open-pull-requests-limit: 0 turns off routine version bumps; security updates still run.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+    groups:
+      security-fixes:
+        applies-to: security-updates
+        patterns: ["*"]
